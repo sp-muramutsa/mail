@@ -29,6 +29,7 @@ function compose_email()
 
 // Track current mailbox
 let current_mailbox = '';
+
 function load_mailbox(mailbox) 
 {
   
@@ -74,7 +75,6 @@ function load_mailbox(mailbox)
 
 function send_email(event) 
 {
-  // console.log("Send Email function opened");
   event.preventDefault(); // Prevent default submission and unnecessary submission
 
   // Capture form submission
@@ -122,9 +122,6 @@ function view_email(email_id)
   fetch(`/emails/${email_id}`, 
   {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
     body: JSON.stringify({'read': true})
   })
   .then(response => 
@@ -141,7 +138,8 @@ function view_email(email_id)
     }
   })
   .then(response => response.json())
-  .then(email => {
+  .then(email => 
+    {
     // Show the Email view
     document.querySelector('#emails-view').style.display = 'none';
     document.querySelector('#compose-view').style.display = 'none';
@@ -166,7 +164,7 @@ function view_email(email_id)
 
     }
 
-    else if (current_mailbox = 'archived')
+    else if (current_mailbox == 'archive')
     {
       const unarchive_button = document.createElement('button');
       unarchive_button.innerHTML = 'Unarchive';
@@ -175,6 +173,15 @@ function view_email(email_id)
     }
 
     document.querySelector('#email-view').appendChild(archive_or_unarchive_div);
+
+  // Replying to an email
+  const reply_div = document.createElement('div');
+  const reply_button = document.createElement('button');
+  reply_button.innerHTML = 'Reply';
+  reply_button.addEventListener('click', () => reply_email(email));
+  reply_div.appendChild(reply_button);
+  document.querySelector('#email-view').appendChild(reply_div);
+
   })
 }
 
@@ -213,6 +220,25 @@ function archive_or_unarchive_email(email_id, archive_status)
       })
 }
 
+function reply_email(email)
+{
+    // Show the Email view
+    document.querySelector('#emails-view').style.display = 'none';
+    document.querySelector('#compose-view').style.display = 'block';
+    document.querySelector('#email-view').style.display = 'none';
 
+    // Fill the appropriates fields
+
+  document.querySelector('#compose-recipients').value = email.sender;
+
+  // Check if the subject starts with 'Re:'
+  let subject = email.subject;
+  if (!subject.startsWith('Re: ')) 
+  {
+    subject = 'Re: ' + subject;
+  }
+  document.querySelector('#compose-subject').value = subject;
+  document.querySelector('#compose-body').value = `On ${email.timestamp}\n${email.sender} wrote:\n${email.body}\n\n\n`;
+}
 
 
