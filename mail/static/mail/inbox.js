@@ -28,12 +28,12 @@ function compose_email()
 }
 
 // Track current mailbox
-let currentMailbox = '';
+let current_mailbox = '';
 function load_mailbox(mailbox) 
 {
   
   // Update current mailbox
-  currentMailbox = mailbox;
+  current_mailbox = mailbox;
   
   // Show the mailbox and hide other views
   document.querySelector('#emails-view').style.display = 'block';
@@ -118,41 +118,101 @@ function send_email(event)
 
 function view_email(email_id) 
 {
-  // GET request to get the email
-  fetch(`/emails/${email_id}`, {
+  // Change email status to read
+  fetch(`/emails/${email_id}`, 
+  {
     method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify({'read': true})
   })
   .then(response => 
     {
     if (response.ok) 
     {
-      console.log('Email marked as read');
       // Fetch and display the email details
       return fetch(`/emails/${email_id}`);
     } 
+    
     else 
     {
       throw new Error('Failed to mark email as read');
     }
   })
   .then(response => response.json())
-  .then(email => 
-  {
+  .then(email => {
     // Show the Email view
     document.querySelector('#emails-view').style.display = 'none';
     document.querySelector('#compose-view').style.display = 'none';
     document.querySelector('#email-view').style.display = 'block';
     document.querySelector('#email-view').innerHTML = `
-    <h3>${email.subject}</h3>
-    Sender: ${email.sender} 
-    <br>
-    Recipients: ${email.recipients}
-    <div>
-    <p>${email.body}</p>
-    </div>
-    Sent on ${email.timestamp}
-  });
-  
+      <h3>${email.subject}</h3>
+      <p><strong>From:</strong> ${email.sender}</p>
+      <p><strong>To:</strong> ${email.recipients.join(', ')}</p>
+      <p><strong>Sent on:</strong> ${email.timestamp}</p>
+      <hr>
+      <p>${email.body}</p>
+    `;
+
+    // Conditionally show the Archive/Unarchive button
+    const archive_or_unarchive_div = document.createElement('div');
+    if (current_mailbox == 'inbox')
+    {
+      const archive_button = document.createElement('button');
+      archive_button.innerHTML = 'Archive';
+      archive_button.addEventListener('click', () => archive_or_unarchive_email(email_id, false));
+      archive_or_unarchive_div.appendChild(archive_button);
+
+    }
+
+    else if (current_mailbox = 'archived')
+    {
+      const unarchive_button = document.createElement('button');
+      unarchive_button.innerHTML = 'Unarchive';
+      unarchive_button.addEventListener('click', () => archive_or_unarchive_email(email_id));
+      archive_or_unarchive_div.appendChild(unarchive_button);
+    }
+
+    document.querySelector('#email-view').appendChild(archive_or_unarchive_div);
+  })
 }
+
+function archive_or_unarchive_email(email_id, archive_status)
+{
+  fetch(`/emails/${email_id}`)
+  .then(response => response.json())
+  .then(email => 
+    {
+      // Change the archive status
+      const new_archive_status = !email.archived;
+
+      return fetch(`/emails/${email_id}`, 
+      {
+        method: 'PUT',
+        body: JSON.stringify({'archived': new_archive_status})
+      });
+    })
+    .then (response => 
+      {
+        if(!response.ok) 
+        {
+          throw new Error('Failed to update archive status');
+        }
+
+        // Reload to the appropiate mailbox
+        if (current_mailbox == 'inbox')
+        {
+          load_mailbox('archive');
+        }
+
+        else
+        {
+          load_mailbox('inbox');
+        }
+      })
+}
+
+
+
 
